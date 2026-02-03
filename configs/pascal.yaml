@@ -1,0 +1,58 @@
+# arguments for dataset
+dataset: pascal
+nclass: 2
+crop_size: 100
+data_root: my_data
+contrastive_weight: 0.1  # 对比学习损失权重
+temperature: 0.1  # 对比学习的温度参数
+
+
+# arguments for training
+epochs: 30
+batch_size: 2 # per GPU x 4 GPUs
+lr: 0.001
+lr_multi: 10.0
+optimizer:
+    type: SGD
+    kwargs:
+      lr: 0.001  # 0.001:8*2gpus, 4*4gpus; 0.002:8*4gpus.
+      momentum: 0.9
+      weight_decay: 0.0001
+criterion:
+  name: CELoss
+#  name: OHEM
+  kwargs:
+    ignore_index: 255
+conf_thresh: 0.3
+
+# arguments for models
+model: deeplabv3plus
+#backbone: mobilenetv2
+backbone: resnet50
+#backbone: xception
+#backbone: resnet101
+#backbone: resnet152
+
+
+replace_stride_with_dilation: [False, False, True]
+dilations: [6, 12, 18]
+
+net: # Required.
+  nclass: 3
+  backbone: resnet50
+  sync_bn: True
+  ema_decay: 0.99
+  replace_stride_with_dilation: [False, False, True]
+  dilations: [6, 12, 18]
+  encoder:
+    type: resnet50
+    kwargs:
+      multi_grid: True
+      zero_init_residual: True
+      fpn: True
+      replace_stride_with_dilation: [False, False, True]  #layer0...1 is fixed, layer2...4
+  decoder:
+    type: deeplabv3plus
+    kwargs:
+      inner_planes: 256
+      dilations: [6, 12, 18]
