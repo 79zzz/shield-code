@@ -3,8 +3,7 @@ dataset: pascal
 nclass: 2
 crop_size: 100
 data_root: my_data
-contrastive_weight: 0.1  # 对比学习损失权重
-temperature: 0.1  # 对比学习的温度参数
+
 
 
 # arguments for training
@@ -27,11 +26,8 @@ conf_thresh: 0.3
 
 # arguments for models
 model: deeplabv3plus
-#backbone: mobilenetv2
 backbone: resnet50
 #backbone: xception
-#backbone: resnet101
-#backbone: resnet152
 
 
 replace_stride_with_dilation: [False, False, True]
