@@ -79,9 +79,6 @@ class DeepLabV3Plus(nn.Module):
         low_channels = 256
         high_channels = 2048
 
-        self.cca = CrissCrossAttention(2048)
-
-
         self.head = ASPPModule(high_channels, cfg['dilations'])
 
         self.reduce = nn.Sequential(nn.Conv2d(low_channels, 48, 1, bias=False),
@@ -102,8 +99,6 @@ class DeepLabV3Plus(nn.Module):
 
         feats = self.backbone.base_forward(x)
         c1, c4 = feats[0], feats[-1]
-
-        c4 = self.cca(c4)
 
         if need_fp:
             outs = self._decode(torch.cat((c1, nn.Dropout2d(0.5)(c1))),
@@ -162,23 +157,35 @@ class ASPPModule(nn.Module):
         out_channels = in_channels // 8
         rate1, rate2, rate3 = atrous_rates
 
-        self.b0 = nn.Sequential(nn.Conv2d(in_channels, out_channels, 1, bias=False),
-                                nn.BatchNorm2d(out_channels),
-                                nn.ReLU(True))
+        self.b0 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(True)
+        )
         self.b1 = ASPPConv(in_channels, out_channels, rate1)
         self.b2 = ASPPConv(in_channels, out_channels, rate2)
         self.b3 = ASPPConv(in_channels, out_channels, rate3)
         self.b4 = ASPPPooling(in_channels, out_channels)
+        
+        self.cca = CrissCrossAttention(5 * out_channels)
 
-        self.project = nn.Sequential(nn.Conv2d(5 * out_channels, out_channels, 1, bias=False),
-                                     nn.BatchNorm2d(out_channels),
-                                     nn.ReLU(True))
+        self.project = nn.Sequential(
+            nn.Conv2d(5 * out_channels, out_channels, 1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(True)
+        )
 
-    def forward(self, x):
-        feat0 = self.b0(x)
-        feat1 = self.b1(x)
-        feat2 = self.b2(x)
-        feat3 = self.b3(x)
-        feat4 = self.b4(x)
-        y = torch.cat((feat0, feat1, feat2, feat3, feat4), 1) # 1表示在通道维度上进行拼接
-        return self.project(y)
+
+def forward(self, x):
+    feat0 = self.b0(x)
+    feat1 = self.b1(x)
+    feat2 = self.b2(x)
+    feat3 = self.b3(x)
+    feat4 = self.b4(x)
+    
+    y = torch.cat((feat0, feat1, feat2, feat3, feat4), dim=1)
+    y = self.cca(y)
+
+    return self.project(y)
+
+
